@@ -1,0 +1,29 @@
+{
+    "name": "teddy-releaser",
+    "version": "0.0.1",
+    "description": "Create a release of Teddy.",
+    "private": true,
+    "type": "module",
+    "scripts": {
+        "build": "gulp --silent", 
+        "gulp": "gulp"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/teddyful/teddy-releaser.git"
+    },
+    "author": "Jillur Quddus",
+    "license": "GPL-3.0",
+    "bugs": {
+        "url": "https://github.com/teddyful/teddy-releaser/issues"
+    },
+    "homepage": "https://github.com/teddyful/teddy-releaser#readme",
+    "devDependencies": {
+        "del": "8.0.0", 
+        "gulp": "4.0.2", 
+        "sha256-file": "1.0.0", 
+        "winston": "3.17.0", 
+        "winston-daily-rotate-file": "5.0.0", 
+        "zip-a-folder": "3.1.8"
+    }
+}

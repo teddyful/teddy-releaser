@@ -1,2 +1,2 @@
 # teddy-releaser
-Create release binaries and checksums for Teddy.
+Create a release of Teddy.
