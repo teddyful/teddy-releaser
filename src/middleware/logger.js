@@ -7,7 +7,7 @@
 
 import winston from 'winston';
 import 'winston-daily-rotate-file'
-const { combine, label, printf, timestamp } = winston.format;
+const { combine, errors, label, printf, timestamp } = winston.format;
 
 
 const loggingFormat = printf(({ level, message, label, timestamp }) => {
@@ -29,8 +29,11 @@ const logger = winston.createLogger({
         service: 'teddy-releaser'
     }, 
     format: combine(
+        errors({ 
+            stack: true
+        }), 
         label({ 
-            label: 'Teddy Releaser' 
+            label: 'Teddy Releaser'
         }),
         timestamp({
             format: 'YYYY-MM-DD HH:mm:ss.SSS'
@@ -40,7 +43,12 @@ const logger = winston.createLogger({
     transports: [
         consoleTransport, 
         fileRotateTransport
-    ]
+    ], 
+    exceptionHandlers: [
+        consoleTransport, 
+        fileRotateTransport
+    ], 
+    exitOnError: true
 });
 
 export default logger;

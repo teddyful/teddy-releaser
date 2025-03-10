@@ -1,5 +1,5 @@
 /**
- * Teddy release builder configuration.
+ * Release builder configuration.
  *
  * @author jillurquddus
  * @since  0.0.1

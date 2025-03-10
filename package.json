@@ -2,11 +2,11 @@
     "name": "teddy-releaser",
     "version": "0.0.1",
     "description": "Create a release of Teddy.",
+    "main": "build.js", 
     "private": true,
     "type": "module",
     "scripts": {
-        "build": "gulp --silent", 
-        "gulp": "gulp"
+        "build": "node build.js"
     },
     "repository": {
         "type": "git",
@@ -19,8 +19,8 @@
     },
     "homepage": "https://github.com/teddyful/teddy-releaser#readme",
     "devDependencies": {
+        "commander": "13.1.0", 
         "del": "8.0.0", 
-        "gulp": "4.0.2", 
         "sha256-file": "1.0.0", 
         "winston": "3.17.0", 
         "winston-daily-rotate-file": "5.0.0", 
