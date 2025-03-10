@@ -15,7 +15,7 @@
 
 ## <a name="introduction"></a>1. Introduction
 
-The Teddy releaser app creates the archive (.zip and .tgz) and checksum (SHA-256) files that must be attached to an official release of <a href="https://teddyful.com" target="_blank">Teddy</a>.
+The Teddy releaser app creates the archive (.zip and .tgz) and checksum (SHA-256) files that must be attached to an official release of <a href="https://github.com/teddyful/teddy" target="_blank">Teddy</a>.
 
 <p align="right"><a href="#readme-top">Back to Top &#9650;</a></p>
 
@@ -23,8 +23,8 @@ The Teddy releaser app creates the archive (.zip and .tgz) and checksum (SHA-256
 
 Please ensure that the following required software services are installed in your environment.
 
-* [Git](https://git-scm.com/) - Distributed version control system.
-* [Node.js](https://nodejs.org/) - JavaScript runtime environment.
+* <a href="https://git-scm.com/" target="_blank">Git</a> - Distributed version control system.
+* <a href="https://nodejs.org/" target="_blank">Node.js</a> - JavaScript runtime environment.
 
 <p align="right"><a href="#readme-top">Back to Top &#9650;</a></p>
 
@@ -52,11 +52,11 @@ npm install
 
 ### Build a Release
 
-To build a release, run either `npm run build` or `node build.js` with the following mandatory options.
+To build a release, run either `npm run build` or `node build.js` and provide the following mandatory command-line arguments.
 
 #### --repo &lt;repo&gt;
 
-The absolute path to the locally cloned Teddy repository that will be used to build a release of Teddy.
+The absolute path to the locally cloned <a href="https://github.com/teddyful/teddy" target="_blank">Teddy repository</a> that will be used to build a release of Teddy.
 
 ### Example
 
