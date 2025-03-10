@@ -19,7 +19,7 @@ The Teddy releaser app creates the archive (.zip and .tgz) and checksum (SHA-256
 
 <p align="right"><a href="#readme-top">Back to Top &#9650;</a></p>
 
-## <a name="usage"></a>2. Prerequisites
+## <a name="prerequisites"></a>2. Prerequisites
 
 Please ensure that the following required software services are installed in your environment.
 
@@ -28,7 +28,7 @@ Please ensure that the following required software services are installed in you
 
 <p align="right"><a href="#readme-top">Back to Top &#9650;</a></p>
 
-## <a name="clone"></a>3. Setup
+## <a name="setup"></a>3. Setup
 
 Clone the teddy-releaser app to a directory of your choice. Navigate into this directory and ensure that the `main` branch is checked out. Then install the required dependencies using NPM as follows.
 
