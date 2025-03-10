@@ -30,7 +30,7 @@ Please ensure that the following required software services are installed in you
 
 ## <a name="setup"></a>3. Setup
 
-Clone the teddy-releaser app to a directory of your choice. Navigate into this directory and ensure that the `main` branch is checked out. Then install the required dependencies using NPM as follows.
+Clone the `teddy-releaser` app to a directory of your choice. Navigate into this directory and ensure that the `main` branch is checked out. Then install the required dependencies using NPM as follows.
 
 ```
 # Clone the teddy-releaser app.
@@ -90,6 +90,14 @@ npm run build -- --repo /home/teddyful/teddy
 ### Help
 
 Run `npm run build -- -h` or `node build.js -h` to see a complete list of usage options.
+
+### Release Files
+
+The built release files will be created in `teddy-releaser/releases/{version}`, where `{version}` is extracted from `{repo}/package.json`, and consist of the following:
+
+* teddy-{version}.tgz
+* teddy-{version}.zip
+* teddy-{version}-checksums.txt (SHA-256 and hex encoding)
 
 <p align="right"><a href="#readme-top">Back to Top &#9650;</a></p>
 
