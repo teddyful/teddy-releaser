@@ -30,7 +30,7 @@ Please ensure that the following required software services are installed in you
 
 ## <a name="setup"></a>3. Setup
 
-Clone the `teddy-releaser` app to a directory of your choice. Navigate into this directory and ensure that the `main` branch is checked out. Then install the required dependencies using NPM as follows.
+Clone the `teddy-releaser` repository to a directory of your choice. Navigate into this directory and ensure that the `main` branch is checked out. Then install the required dependencies using NPM as follows.
 
 ```
 # Clone the teddy-releaser app.
