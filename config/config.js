@@ -14,17 +14,21 @@ const config = {
         resources: {
             directories: [
                 `config`, 
-                `sites/travelbook`, 
+                `sites/travelbook/assets`, 
+                `sites/travelbook/languages`, 
+                `sites/travelbook/pages`, 
+                `sites/travelbook/web`, 
                 `system/`, 
                 `themes/bear`
             ], 
             files: [
                 `.gitignore`, 
-                `gulpfile.js`, 
+                `build.js`, 
                 `LICENSE`, 
                 `package.json`, 
                 `package-lock.json`, 
-                `README.md`
+                `README.md`, 
+                `sites/travelbook/site.json`
             ]
         }
     }

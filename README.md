@@ -15,7 +15,7 @@
 
 ## <a name="introduction"></a>1. Introduction
 
-The Teddy releaser app creates the archive (.zip and .tgz) and checksum (SHA-256) files that must be attached to an official release of <a href="https://github.com/teddyful/teddy" target="_blank">Teddy</a>.
+The Teddy releaser app runs all tests and then creates the archive (.zip and .tgz) and checksum (SHA-256) files that must be attached to an official release of <a href="https://github.com/teddyful/teddy" target="_blank">Teddy</a>.
 
 <p align="right"><a href="#readme-top">Back to Top &#9650;</a></p>
 
@@ -56,7 +56,7 @@ To build a release, run either `npm run build` or `node build.js` and provide th
 
 #### --repo &lt;repo&gt;
 
-The absolute path to the locally cloned <a href="https://github.com/teddyful/teddy" target="_blank">Teddy repository</a> that will be used to build a release of Teddy.
+The absolute path to the local <a href="https://github.com/teddyful/teddy" target="_blank">Teddy repository</a> that will be used to build a release of Teddy.
 
 ### Example
 
@@ -74,17 +74,20 @@ npm run build -- --repo /home/teddyful/teddy
  ___________________________
 
 
-2025-03-10 12:43:58.609 [Teddy Releaser] INFO: Started the Teddy release builder app (v0.0.1).
-2025-03-10 12:43:58.610 [Teddy Releaser] INFO: Teddy repo: /home/teddyful/teddy
-2025-03-10 12:43:58.611 [Teddy Releaser] INFO: Building the release ...
-2025-03-10 12:43:58.611 [Teddy Releaser] INFO: Stage 1 of 5 - Validating the repository...
-2025-03-10 12:43:58.612 [Teddy Releaser] INFO: Stage 2 of 5 - Parsing the release version number...
-2025-03-10 12:43:58.613 [Teddy Releaser] INFO: Stage 3 of 5 - Creating the release directory...
-2025-03-10 12:43:58.671 [Teddy Releaser] INFO: Stage 4 of 5 - Creating archives...
-2025-03-10 12:44:01.511 [Teddy Releaser] INFO: Stage 5 of 5 - Generating checksums...
-2025-03-10 12:44:01.531 [Teddy Releaser] INFO: Successfully finished building the release!
-2025-03-10 12:44:01.531 [Teddy Releaser] INFO: Release version number: 0.0.1
-2025-03-10 12:44:01.532 [Teddy Releaser] INFO: Release build directory: ./releases/0.0.1
+2025-03-11 14:51:31.860 [Teddy Releaser] INFO: Started the Teddy release builder app (v0.0.1).
+2025-03-11 14:51:31.862 [Teddy Releaser] INFO: Teddy repo: /home/teddyful/teddy
+2025-03-11 14:51:31.862 [Teddy Releaser] INFO: Building the release ...
+2025-03-11 14:51:31.863 [Teddy Releaser] INFO: Stage 1 of 7 - Validating the repository...
+2025-03-11 14:51:31.864 [Teddy Releaser] INFO: Stage 2 of 7 - Parsing the release version number...
+2025-03-11 14:51:31.864 [Teddy Releaser] INFO: Stage 3 of 7 - Clearing the release directory...
+2025-03-11 14:51:31.987 [Teddy Releaser] INFO: Stage 4 of 7 - Running tests...
+2025-03-11 14:51:35.081 [Teddy Releaser] INFO: Stage 5 of 7 - Creating the release directory...
+2025-03-11 14:51:35.082 [Teddy Releaser] INFO: Stage 6 of 7 - Creating archives...
+2025-03-11 14:51:37.861 [Teddy Releaser] INFO: Stage 7 of 7 - Generating checksums...
+2025-03-11 14:51:37.878 [Teddy Releaser] INFO: Successfully finished building the release!
+2025-03-11 14:51:37.878 [Teddy Releaser] INFO: Release version number: 0.0.1
+2025-03-11 14:51:37.879 [Teddy Releaser] INFO: Release build directory: ./releases/0.0.1
+2025-03-11 14:51:37.879 [Teddy Releaser] INFO: Exiting the Teddy release builder app (exitCode = 0).
 ```
 
 ### Help
@@ -98,6 +101,8 @@ The built release files will be created in `teddy-releaser/releases/{version}`, 
 * teddy-{version}.tgz
 * teddy-{version}.zip
 * teddy-{version}-checksums.txt (SHA-256 and hex encoding)
+
+Note that if any of the tests fail, then the release files will not be created.
 
 <p align="right"><a href="#readme-top">Back to Top &#9650;</a></p>
 

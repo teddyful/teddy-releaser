@@ -26,7 +26,7 @@ console.log('');
 console.log('');
 
 /* -----------------------------------------------------------------------------
- * CLI usage with variadic options
+ * CLI with variadic options
  * ---------------------------------------------------------------------------*/
 
 const program = new Command();
@@ -34,11 +34,16 @@ program.name(packageConfig.name)
     .description(packageConfig.description)
     .version(packageConfig.version)
     .requiredOption('--repo <repo>', 
-        'Absolute path to the locally cloned Teddy repository')
+        'Absolute path to the local Teddy repository (required)')
     .action(async function(opts) {
         logger.info('Started the Teddy release builder app ' + 
             `(v${packageConfig.version}).`);
         const releaseBuilder = new ReleaseBuilder(opts.repo, config);
         await releaseBuilder.build();
+        logger.info('Exiting the Teddy release builder app (exitCode = ' + 
+            `${releaseBuilder.statusCode}).`);
+        setTimeout(() => {
+            process.exit(releaseBuilder.statusCode);
+        }, 2000);
     })
 program.parse();

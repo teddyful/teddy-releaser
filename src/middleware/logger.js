@@ -7,16 +7,19 @@
 
 import winston from 'winston';
 import 'winston-daily-rotate-file'
-const { combine, errors, label, printf, timestamp } = winston.format;
+const { combine, errors, label, printf, timestamp, uncolorize } = winston.format;
 
 
 const loggingFormat = printf(({ level, message, label, timestamp }) => {
     return `${timestamp} [${label}] ${level.toUpperCase()}: ${message}`;
 });
 
-const consoleTransport = new winston.transports.Console();
+const consoleTransport = new winston.transports.Console({
+    level: 'info'
+});
 
 const fileRotateTransport = new winston.transports.DailyRotateFile({
+    level: 'debug', 
     filename: 'logs/teddy-releaser-%DATE%.log', 
     datePattern: 'YYYY-MM-DD', 
     maxFiles: '14d', 
@@ -24,7 +27,6 @@ const fileRotateTransport = new winston.transports.DailyRotateFile({
 });
 
 const logger = winston.createLogger({
-    level: 'info',
     defaultMeta: {
         service: 'teddy-releaser'
     }, 
@@ -38,6 +40,7 @@ const logger = winston.createLogger({
         timestamp({
             format: 'YYYY-MM-DD HH:mm:ss.SSS'
         }),
+        uncolorize(), 
         loggingFormat
     ),
     transports: [
