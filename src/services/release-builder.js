@@ -6,6 +6,7 @@
  */
 
 import * as child from 'child_process';
+import branchName from "current-git-branch";
 import fs from 'fs';
 import sha256File from 'sha256-file';
 import util from 'util';
@@ -24,6 +25,7 @@ class ReleaseBuilder {
         this.repoIsValid = false;
         this.testsPassed = false;
         this.version = null;
+        this.versionMatchesRepoBranchName = false;
         this.releaseDir = null;
         this.archiveBaseName = null;
         this.tarPath = null;
@@ -54,6 +56,25 @@ class ReleaseBuilder {
         const packageConfig = JSON.parse(fs.readFileSync(
             `${this.repo}/package.json`, 'utf8'));
         this.version = packageConfig.version;
+    }
+
+    #checkReleaseVersionMatchesRepoBranchName() {
+        const repoBranchName = branchName({ cwd: this.repo });
+        if ( repoBranchName == 'main' ) {
+            this.versionMatchesRepoBranchName = true;
+        } else if ( repoBranchName.includes('release-') ) {
+            const repoBranchVersion = repoBranchName
+                .replace('release-', '')
+                .trim();
+            this.versionMatchesRepoBranchName = 
+                repoBranchVersion == this.version;
+        }
+        if ( !this.versionMatchesRepoBranchName ) {
+            logger.error(new Error('The version number specified in ' + 
+                `package.json (${this.version}) does not match the version ` + 
+                'number contained within the name of the checked-out repo ' + 
+                `release branch (${repoBranchName}).`));
+        }
     }
 
     #emptyReleaseDirectory() {
@@ -121,44 +142,53 @@ class ReleaseBuilder {
             logger.info('Building the release ...');
 
             // Validate the repository.
-            logger.info('Stage 1 of 7 - Validating the repository...');
+            logger.info('Stage 1 of 8 - Validating the repository...');
             this.#validateRepo();
-
             if ( this.repoIsValid ) {
 
                 // Get the release version number.
-                logger.info(
-                    'Stage 2 of 7 - Parsing the release version number...');
+                logger.info('Stage 2 of 8 - Retrieving the release ' + 
+                    'version number...');
                 this.#getReleaseVersion();
 
                 // Empty the release directory if it exists.
-                logger.info('Stage 3 of 7 - Clearing the release directory...');
+                logger.info('Stage 3 of 8 - Clearing the release directory...');
                 this.#emptyReleaseDirectory();
 
-                // Run tests.
-                logger.info('Stage 4 of 7 - Running tests...');
-                await this.#runTests();
+                // Check the version number matches the repo branch name.
+                logger.info('Stage 4 of 8 - Checking the release ' + 
+                    'version number...');
+                this.#checkReleaseVersionMatchesRepoBranchName();
+                if ( this.versionMatchesRepoBranchName ) {
 
-                if ( this.testsPassed ) {
+                    // Run tests.
+                    logger.info('Stage 5 of 8 - Running tests...');
+                    await this.#runTests();
+                    if ( this.testsPassed ) {
 
-                    // Create the release directory if it does not exist.
-                    logger.info(
-                        'Stage 5 of 7 - Creating the release directory...');
-                    this.#createReleaseDirectory();
+                        // Create the release directory if it does not exist.
+                        logger.info('Stage 6 of 8 - Creating the release ' + 
+                            'directory...');
+                        this.#createReleaseDirectory();
 
-                    // Create the archive files.
-                    logger.info('Stage 6 of 7 - Creating archives...');
-                    await this.#createArchives();
+                        // Create the archive files.
+                        logger.info('Stage 7 of 8 - Creating archives...');
+                        await this.#createArchives();
 
-                    // Create the checksums file.
-                    logger.info('Stage 7 of 7 - Generating checksums...');
-                    this.#createChecksums();
+                        // Create the checksums file.
+                        logger.info('Stage 8 of 8 - Generating checksums...');
+                        this.#createChecksums();
 
-                    // Update the status code.
-                    this.statusCode = 0;
-                    logger.info('Successfully finished building the release!');
-                    logger.info(`Release version number: ${this.version}`);
-                    logger.info(`Release build directory: ${this.releaseDir}`);
+                        // Update the status code.
+                        this.statusCode = 0;
+                        logger.info('Successfully finished building ' + 
+                            'the release!');
+                        logger.info('Release version number: ' + 
+                            this.version);
+                        logger.info('Release build directory: ' + 
+                            this.releaseDir);
+
+                    }
 
                 }
 
@@ -172,8 +202,8 @@ class ReleaseBuilder {
             try {
                 this.#emptyReleaseDirectory();
             } catch (error) {
-                logger.error(
-                    'Could not clear the release build directory post-error.');
+                logger.error('Could not clear the release build ' + 
+                    'directory post-error.');
                 logger.debug(error.stack);
             }
         }
