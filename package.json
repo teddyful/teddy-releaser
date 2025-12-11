@@ -19,12 +19,12 @@
     },
     "homepage": "https://github.com/teddyful/teddy-releaser#readme",
     "devDependencies": {
-        "commander": "14.0.1", 
+        "commander": "14.0.2", 
         "current-git-branch": "2.0.2", 
         "del": "8.0.1", 
         "sha256-file": "1.0.0", 
-        "winston": "3.18.1", 
+        "winston": "3.19.0", 
         "winston-daily-rotate-file": "5.0.0", 
-        "zip-a-folder": "3.1.9"
+        "zip-a-folder": "4.0.4"
     }
 }
