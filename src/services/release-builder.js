@@ -114,7 +114,7 @@ class ReleaseBuilder {
             const targetPath = `${this.releaseDir}/teddy/${resource}`;
             fs.cpSync(sourcePath, targetPath, { 
                 recursive: true, 
-                preserveTimestamps: true     
+                preserveTimestamps: true
             });
         }
         this.tarPath = `${this.releaseDir}/${this.archiveBaseName}.tgz`;
