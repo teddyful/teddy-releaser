@@ -11,8 +11,10 @@ import * as child from 'child_process';
 import branchName from "current-git-branch";
 import fs from 'fs';
 import path from 'path';
+import semver from 'semver';
 import sha256File from 'sha256-file';
 import { deleteSync } from 'del';
+import { fileURLToPath } from 'url';
 import { tar, zip } from 'zip-a-folder';
 
 import logger from '../middleware/logger.js';
@@ -24,9 +26,15 @@ import {
     writeStringToFile } 
     from '../utils/io-utils.js';
 
+const RELEASER_ROOT = path.resolve(
+    path.dirname(fileURLToPath(import.meta.url)),
+    '..',
+    '..'
+);
+const RELEASE_BRANCH_REGEX = /^release-(\d+\.\d+\.\d+)$/;
 const RELEASE_CONFIG_FILE_PATH = path.join('config', 'release.json');
 const RELEASE_PACKAGE_FILE_NAME = 'package.json';
-const RELEASE_DIR_PATH = path.join('.', 'working', 'releases');
+const RELEASE_DIR_PATH = path.join(RELEASER_ROOT, 'working', 'releases');
 const TEDDY_LABEL = 'teddy';
 
 class ReleaseBuilder {
@@ -78,19 +86,38 @@ class ReleaseBuilder {
 
     #getReleaseVersion() {
         const packageConfig = loadJsonFile(path.join(
-            this.pathToTeddyRepo, RELEASE_PACKAGE_FILE_NAME));
-        this.version = packageConfig.version;
+            this.pathToTeddyRepo,
+            RELEASE_PACKAGE_FILE_NAME
+        ));
+        const rawVersion = packageConfig.version;
+        const version = semver.clean(rawVersion);
+        if ( !version ) {
+            throw new Error(
+                `The version number specified in package.json is invalid: ` +
+                `'${rawVersion}'.`
+            );
+        }
+        if ( version !== rawVersion ) {
+            throw new Error(
+                'The version number specified in package.json must be a ' +
+                `clean semantic version. Expected '${version}', received ` +
+                `'${rawVersion}'.`
+            );
+        }
+        this.version = version;
     }
 
     #checkReleaseVersionMatchesRepoBranchName() {
         const repoBranchName = branchName({ cwd: this.pathToTeddyRepo });
-        if ( repoBranchName.includes('release-') ) {
-            const repoBranchVersion = repoBranchName
-                .replace('release-', '')
-                .trim();
-            this.versionMatchesRepoBranchName = 
-                repoBranchVersion == this.version;
+        const match = RELEASE_BRANCH_REGEX.exec(repoBranchName ?? '');
+        if ( !match ) {
+            throw new Error(
+                'Releases can only be built from branches named ' +
+                `'release-x.y.z'. Current branch: '${repoBranchName}'.`
+            );
         }
+        const repoBranchVersion = match[1];
+        this.versionMatchesRepoBranchName = repoBranchVersion === this.version;
         if ( !this.versionMatchesRepoBranchName ) {
             throw new Error('The version number specified in ' + 
                 `package.json (${this.version}) does not match the version ` + 
@@ -106,6 +133,48 @@ class ReleaseBuilder {
                 dot: true, 
                 force: true
             });
+        }
+    }
+
+    async #checkWorkingTreeIsClean() {
+        const result = await new Promise((resolve, reject) => {
+            const childProcess = child.spawn(
+                'git',
+                ['status', '--porcelain'],
+                {
+                    cwd: this.pathToTeddyRepo,
+                    shell: false,
+                    stdio: ['ignore', 'pipe', 'pipe']
+                }
+            );
+            let stdout = '';
+            let stderr = '';
+            childProcess.stdout.on('data', data => {
+                stdout += data.toString();
+            });
+            childProcess.stderr.on('data', data => {
+                stderr += data.toString();
+            });
+            childProcess.on('error', reject);
+            childProcess.on('close', code => {
+                if ( code === 0 ) {
+                    resolve(stdout.trim());
+                    return;
+                }
+                const error = new Error(
+                    `Git status failed with exit code ${code}.`
+                );
+                error.code = code;
+                error.stderr = stderr;
+                reject(error);
+            });
+        });
+        if ( result.length > 0 ) {
+            throw new Error(
+                'The Teddy working tree is not clean. Commit, stash, or ' +
+                'remove local changes before building a release.\n\n' +
+                result
+            );
         }
     }
 
@@ -157,9 +226,8 @@ class ReleaseBuilder {
                             resolve();
                             return;
                         }
-                        const error = new Error(
-                            `${testCommand.label} failed with exit code ${code}.`
-                        );
+                        const error = new Error(`${testCommand.label} ` + 
+                            `failed with exit code ${code}.`);
                         error.code = code;
                         error.stdout = stdout;
                         error.stderr = stderr;
@@ -236,41 +304,46 @@ class ReleaseBuilder {
             logger.info('Building the release ...');
 
             // Validate the repository.
-            logger.info('Stage 1 of 8 - Validating the repository...');
+            logger.info('Stage 1 of 9 - Validating the repository...');
             this.#validateRepo();
             if ( this.repoIsValid ) {
 
                 // Get the release version number.
-                logger.info('Stage 2 of 8 - Retrieving the release ' + 
+                logger.info('Stage 2 of 9 - Retrieving the release ' + 
                     'version number...');
                 this.#getReleaseVersion();
 
                 // Empty the release directory if it exists.
-                logger.info('Stage 3 of 8 - Emptying the release directory...');
+                logger.info('Stage 3 of 9 - Emptying the release directory...');
                 this.#emptyReleaseDirectory();
 
                 // Check the version number matches the repo branch name.
-                logger.info('Stage 4 of 8 - Checking the release ' + 
+                logger.info('Stage 4 of 9 - Checking the release ' + 
                     'version number...');
                 this.#checkReleaseVersionMatchesRepoBranchName();
                 if ( this.versionMatchesRepoBranchName ) {
 
+                    // Check working tree cleanliness.
+                    logger.info('Stage 5 of 9 - Checking working tree ' + 
+                        'cleanliness...');
+                    await this.#checkWorkingTreeIsClean();
+
                     // Run tests.
-                    logger.info('Stage 5 of 8 - Running test suite...');
+                    logger.info('Stage 6 of 9 - Running test suite...');
                     await this.#runTests();
                     if ( this.testsPassed ) {
 
                         // Create the release directory if it does not exist.
-                        logger.info('Stage 6 of 8 - Creating the release ' + 
+                        logger.info('Stage 7 of 9 - Creating the release ' + 
                             'directory...');
                         this.#createReleaseDirectory();
 
                         // Create the archive files.
-                        logger.info('Stage 7 of 8 - Creating archives...');
+                        logger.info('Stage 8 of 9 - Creating archives...');
                         await this.#createArchives();
 
                         // Create the checksums file.
-                        logger.info('Stage 8 of 8 - Generating checksums...');
+                        logger.info('Stage 9 of 9 - Generating checksums...');
                         this.#createChecksums();
 
                         // Update the status code.
