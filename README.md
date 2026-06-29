@@ -10,7 +10,8 @@
 [2. Prerequisites](#prerequisites)<br/>
 [3. Setup](#setup)<br/>
 [4. Usage](#usage)<br/>
-[5. Further Information](#information)<br/>
+[5. Release Checklist](#release-checklist)<br/>
+[6. Further Information](#information)<br/>
 <br/>
 
 ## <a name="introduction"></a>1. Introduction
@@ -69,25 +70,29 @@ npm run build -- --repo /home/teddyful/teddy
            ) . . (
  ____,--._(___Y___)_,--.____
      `--'           `--'
-            TEDDY
+        TEDDY RELEASER
          teddyful.com
  ___________________________
 
 
-2025-03-11 14:51:31.860 [Teddy Releaser] INFO: Started the Teddy release builder app (v0.0.1).
-2025-03-11 14:51:31.862 [Teddy Releaser] INFO: Teddy repo: /home/teddyful/teddy
-2025-03-11 14:51:31.862 [Teddy Releaser] INFO: Building the release ...
-2025-03-11 14:51:31.863 [Teddy Releaser] INFO: Stage 1 of 7 - Validating the repository...
-2025-03-11 14:51:31.864 [Teddy Releaser] INFO: Stage 2 of 7 - Parsing the release version number...
-2025-03-11 14:51:31.864 [Teddy Releaser] INFO: Stage 3 of 7 - Clearing the release directory...
-2025-03-11 14:51:31.987 [Teddy Releaser] INFO: Stage 4 of 7 - Running tests...
-2025-03-11 14:51:35.081 [Teddy Releaser] INFO: Stage 5 of 7 - Creating the release directory...
-2025-03-11 14:51:35.082 [Teddy Releaser] INFO: Stage 6 of 7 - Creating archives...
-2025-03-11 14:51:37.861 [Teddy Releaser] INFO: Stage 7 of 7 - Generating checksums...
-2025-03-11 14:51:37.878 [Teddy Releaser] INFO: Successfully finished building the release!
-2025-03-11 14:51:37.878 [Teddy Releaser] INFO: Release version number: 0.0.1
-2025-03-11 14:51:37.879 [Teddy Releaser] INFO: Release build directory: ./releases/0.0.1
-2025-03-11 14:51:37.879 [Teddy Releaser] INFO: Exiting the Teddy release builder app (exitCode = 0).
+2026-06-29 17:42:42.009 [Teddy Releaser] INFO: Started the Teddy release builder app (v0.0.1).
+2026-06-29 17:42:42.010 [Teddy Releaser] INFO: Teddy repo: /home/teddyful/teddy
+2026-06-29 17:42:42.010 [Teddy Releaser] INFO: Building the release ...
+2026-06-29 17:42:42.010 [Teddy Releaser] INFO: Stage 1 of 9 - Validating the repository...
+2026-06-29 17:42:42.010 [Teddy Releaser] INFO: Stage 2 of 9 - Retrieving the release version number...
+2026-06-29 17:42:42.010 [Teddy Releaser] INFO: Stage 3 of 9 - Emptying the release directory...
+2026-06-29 17:42:42.011 [Teddy Releaser] INFO: Stage 4 of 9 - Checking the release version number...
+2026-06-29 17:42:42.019 [Teddy Releaser] INFO: Stage 5 of 9 - Checking working tree cleanliness...
+2026-06-29 17:42:42.026 [Teddy Releaser] INFO: Stage 6 of 9 - Running test suite...
+2026-06-29 17:42:42.027 [Teddy Releaser] DEBUG: Running Teddy test suite...
+2026-06-29 17:42:43.443 [Teddy Releaser] DEBUG: Running Teddy upgrade test suite...
+2026-06-29 17:42:50.261 [Teddy Releaser] INFO: Stage 7 of 9 - Creating the release directory...
+2026-06-29 17:42:50.261 [Teddy Releaser] INFO: Stage 8 of 9 - Creating archives...
+2026-06-29 17:42:52.680 [Teddy Releaser] INFO: Stage 9 of 9 - Generating checksums...
+2026-06-29 17:42:52.722 [Teddy Releaser] INFO: Successfully finished building the release!
+2026-06-29 17:42:52.722 [Teddy Releaser] INFO: Release version number: 0.0.15
+2026-06-29 17:42:52.722 [Teddy Releaser] INFO: Release build directory: /home/teddyful/teddy-releaser/working/releases/0.0.15
+2026-06-29 17:42:52.723 [Teddy Releaser] INFO: Exiting the Teddy release builder app (exitCode = 0).
 ```
 
 ### Help
@@ -96,7 +101,7 @@ Run `npm run build -- -h` or `node build.js -h` to see a complete list of usage 
 
 ### Release Files
 
-The built release files will be created in `teddy-releaser/releases/{version}`, where `{version}` is extracted from `{repo}/package.json`, and consist of the following:
+The built release files will be created in `teddy-releaser/working/releases/{version}`, where `{version}` is extracted from `{repo}/package.json`, and consist of the following:
 
 * teddy-{version}.tgz
 * teddy-{version}.zip
@@ -106,7 +111,14 @@ Note that if any of the tests fail, then the release files will not be created.
 
 <p align="right"><a href="#readme-top">Back to Top &#9650;</a></p>
 
-## <a name="information"></a>5. Further Information
+## <a name="release-checklist"></a>5. Release Checklist
+
+Before publishing a Teddy release, follow the checklist in
+[`RELEASE_CHECKLIST.md`](RELEASE_CHECKLIST.md).
+
+<p align="right"><a href="#readme-top">Back to Top &#9650;</a></p>
+
+## <a name="information"></a>6. Further Information
 
 For further information, please visit <a href="https://teddyful.com" target="_blank">teddyful.com</a>.
 
