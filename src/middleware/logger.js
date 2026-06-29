@@ -1,54 +1,96 @@
 /**
- * Release builder logger.
+ * Teddy release builder logger.
  *
  * @author jillurquddus
- * @since  0.0.1
+ * @copyright Copyright (C) 2025 Jillur Quddus
+ * @license GPL-3.0
+ * @since 0.0.1
  */
 
 import winston from 'winston';
-import 'winston-daily-rotate-file'
+import 'winston-daily-rotate-file';
+import { createDirectory } from '../utils/io-utils.js';
 const { combine, errors, label, printf, timestamp, uncolorize } = winston.format;
 
+const LOG_DIR = 'logs';
+const LOG_FILE_PATTERN = `${LOG_DIR}/teddy-releaser-%DATE%.log`;
+const LOG_LABEL = 'Teddy Releaser';
+const LOG_SERVICE = 'teddy-releaser';
+const LOG_TIMESTAMP_FORMAT = 'YYYY-MM-DD HH:mm:ss.SSS';
+const CONSOLE_LOG_LEVEL = process.env.TEDDY_RELEASER_CONSOLE_LOG_LEVEL ?? 'debug';
+const FILE_LOG_LEVEL = process.env.TEDDY_RELEASER_FILE_LOG_LEVEL ?? 'debug';
+createDirectory(LOG_DIR);
 
-const loggingFormat = printf(({ level, message, label, timestamp }) => {
-    return `${timestamp} [${label}] ${level.toUpperCase()}: ${message}`;
+const uppercaseLevel = winston.format(info => {
+    info.level = info.level.toUpperCase();
+    return info;
 });
 
+const loggingFormat = printf(({ level, message, label, timestamp, stack }) => {
+    return `${timestamp} [${label}] ${level}: ${stack ?? message}`;
+});
+
+const consoleLoggingFormat = combine(
+    errors({
+        stack: true
+    }),
+    label({
+        label: LOG_LABEL
+    }),
+    timestamp({
+        format: LOG_TIMESTAMP_FORMAT
+    }),
+    uppercaseLevel(),
+    winston.format.colorize({
+        level: true,
+        message: false
+    }),
+    loggingFormat
+);
+
+const fileLoggingFormat = combine(
+    errors({
+        stack: true
+    }),
+    label({
+        label: LOG_LABEL
+    }),
+    timestamp({
+        format: LOG_TIMESTAMP_FORMAT
+    }),
+    uppercaseLevel(),
+    uncolorize(),
+    loggingFormat
+);
+
 const consoleTransport = new winston.transports.Console({
-    level: 'info'
+    level: CONSOLE_LOG_LEVEL, 
+    format: consoleLoggingFormat
 });
 
 const fileRotateTransport = new winston.transports.DailyRotateFile({
-    level: 'debug', 
-    filename: 'logs/teddy-releaser-%DATE%.log', 
+    filename: LOG_FILE_PATTERN, 
     datePattern: 'YYYY-MM-DD', 
-    maxFiles: '14d', 
-    maxSize: '10m'
+    level: FILE_LOG_LEVEL, 
+    maxFiles: '31d', 
+    maxSize: '10m', 
+    format: fileLoggingFormat
 });
 
 const logger = winston.createLogger({
     defaultMeta: {
-        service: 'teddy-releaser'
+        service: LOG_SERVICE
     }, 
-    format: combine(
-        errors({ 
-            stack: true
-        }), 
-        label({ 
-            label: 'Teddy Releaser'
-        }),
-        timestamp({
-            format: 'YYYY-MM-DD HH:mm:ss.SSS'
-        }),
-        uncolorize(), 
-        loggingFormat
-    ),
     transports: [
         consoleTransport, 
         fileRotateTransport
     ], 
     exceptionHandlers: [
         consoleTransport, 
+        fileRotateTransport
+    ], 
+    rejectionHandlers: [
+        consoleTransport,
         fileRotateTransport
     ], 
     exitOnError: true

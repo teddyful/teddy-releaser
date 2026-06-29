@@ -1,27 +1,40 @@
 /**
- * Release builder service.
+ * Teddy release builder service.
  *
  * @author jillurquddus
- * @since  0.0.1
+ * @copyright Copyright (C) 2025 Jillur Quddus
+ * @license GPL-3.0
+ * @since 0.0.1
  */
 
 import * as child from 'child_process';
 import branchName from "current-git-branch";
 import fs from 'fs';
+import path from 'path';
 import sha256File from 'sha256-file';
-import util from 'util';
 import { deleteSync } from 'del';
 import { tar, zip } from 'zip-a-folder';
 
 import logger from '../middleware/logger.js';
+import { 
+    createDirectory, 
+    loadJsonFile, 
+    pathExists, 
+    resolvePathInsideBase, 
+    writeStringToFile } 
+    from '../utils/io-utils.js';
 
+const RELEASE_CONFIG_FILE_PATH = path.join('config', 'release.json');
+const RELEASE_PACKAGE_FILE_NAME = 'package.json';
+const RELEASE_DIR_PATH = path.join('.', 'working', 'releases');
+const TEDDY_LABEL = 'teddy';
 
 class ReleaseBuilder {
 
-    constructor(repo, config) {
+    constructor(pathToTeddyRepo) {
         this.statusCode = 1;
-        this.repo = repo;
-        this.config = config;
+        this.pathToTeddyRepo = pathToTeddyRepo;
+        this.config = null;
         this.repoIsValid = false;
         this.testsPassed = false;
         this.version = null;
@@ -33,36 +46,45 @@ class ReleaseBuilder {
     }
 
     #validateRepo() {
-
-        // Validate that the specified path points to a valid instance of 
-        // Teddy by confirming the existence of the relevant core Teddy 
-        // system resources.
+        if ( !pathExists(this.pathToTeddyRepo) || 
+            !pathExists(path.join(
+                this.pathToTeddyRepo, RELEASE_CONFIG_FILE_PATH)) ) {
+            throw new Error(
+                `The specified path '${this.pathToTeddyRepo}' does not ` + 
+                'point to a valid instance of Teddy');
+        }
+        const releaseConfigPath = resolvePathInsideBase(
+            RELEASE_CONFIG_FILE_PATH,
+            this.pathToTeddyRepo,
+            'release config file'
+        );
+        this.config = loadJsonFile(releaseConfigPath);
         for ( const resource of this.config.system.resources.directories.concat(
             this.config.system.resources.files) ) {
-            const resourcePath = `${this.repo}/${resource}`;
-            if ( !fs.existsSync(resourcePath) ) {
-                logger.error(new Error('The specified path ' + 
-                    `'${this.repo}' does not point to a valid ` + 
-                    'instance of Teddy, as the following resource is ' + 
-                    `missing: '${resource}'.`));
-                return;
+            const resourcePath = resolvePathInsideBase(
+                resource,
+                this.pathToTeddyRepo,
+                `release resource '${resource}'`
+            );
+            if ( !pathExists(resourcePath) ) {
+                throw new Error(
+                    `The specified path '${this.pathToTeddyRepo}' does not ` + 
+                    'point to a valid instance of Teddy, as the following ' + 
+                    `resource is missing: '${resource}'.`);
             }
         }
         this.repoIsValid = true;
-
     }
 
     #getReleaseVersion() {
-        const packageConfig = JSON.parse(fs.readFileSync(
-            `${this.repo}/package.json`, 'utf8'));
+        const packageConfig = loadJsonFile(path.join(
+            this.pathToTeddyRepo, RELEASE_PACKAGE_FILE_NAME));
         this.version = packageConfig.version;
     }
 
     #checkReleaseVersionMatchesRepoBranchName() {
-        const repoBranchName = branchName({ cwd: this.repo });
-        if ( repoBranchName == 'main' ) {
-            this.versionMatchesRepoBranchName = true;
-        } else if ( repoBranchName.includes('release-') ) {
+        const repoBranchName = branchName({ cwd: this.pathToTeddyRepo });
+        if ( repoBranchName.includes('release-') ) {
             const repoBranchVersion = repoBranchName
                 .replace('release-', '')
                 .trim();
@@ -70,16 +92,16 @@ class ReleaseBuilder {
                 repoBranchVersion == this.version;
         }
         if ( !this.versionMatchesRepoBranchName ) {
-            logger.error(new Error('The version number specified in ' + 
+            throw new Error('The version number specified in ' + 
                 `package.json (${this.version}) does not match the version ` + 
                 'number contained within the name of the checked-out repo ' + 
-                `release branch (${repoBranchName}).`));
+                `release branch (${repoBranchName}).`);
         }
     }
 
     #emptyReleaseDirectory() {
-        this.releaseDir = `${this.config.releases.dir}/${this.version}`;
-        if ( fs.existsSync(this.releaseDir) ) {
+        this.releaseDir = path.join(RELEASE_DIR_PATH, this.version);
+        if ( pathExists(this.releaseDir) ) {
             deleteSync(this.releaseDir, {
                 dot: true, 
                 force: true
@@ -88,39 +110,112 @@ class ReleaseBuilder {
     }
 
     async #runTests() {
-        const cmd = `npm run --prefix "${this.repo}" test`;
-        const exec = util.promisify(child.exec);
-        try {
-            await exec(cmd);
-            this.testsPassed = true;
-        } catch (err) {
-            logger.error(new Error('The specified instance of Teddy failed ' + 
-                `one or more of its tests (exit code: ${err.code}). ` + 
-                'Please consult the logs for further details.'));
-            logger.debug(err.stderr);
+        const testCommands = [
+            {
+                label: 'Teddy test suite',
+                args: ['run', 'test']
+            },
+            {
+                label: 'Teddy upgrade test suite',
+                args: ['run', 'test:upgrade']
+            }
+        ];
+        for ( const testCommand of testCommands ) {
+            try {
+                logger.debug(`Running ${testCommand.label}...`);
+                await new Promise((resolve, reject) => {
+                    const childProcess = child.spawn(
+                        'npm',
+                        testCommand.args,
+                        {
+                            cwd: this.pathToTeddyRepo,
+                            shell: false,
+                            stdio: ['ignore', 'pipe', 'pipe'],
+                            env: {
+                                ...process.env,
+                                CI: 'true',
+                                NO_COLOR: '1',
+                                FORCE_COLOR: '0',
+                                TERM: 'dumb',
+                                npm_config_progress: 'false',
+                                npm_config_audit: 'false',
+                                npm_config_fund: 'false'
+                            }
+                        }
+                    );
+                    let stdout = '';
+                    let stderr = '';
+                    childProcess.stdout.on('data', data => {
+                        stdout += data.toString();
+                    });
+                    childProcess.stderr.on('data', data => {
+                        stderr += data.toString();
+                    });
+                    childProcess.on('error', reject);
+                    childProcess.on('close', code => {
+                        if ( code === 0 ) {
+                            resolve();
+                            return;
+                        }
+                        const error = new Error(
+                            `${testCommand.label} failed with exit code ${code}.`
+                        );
+                        error.code = code;
+                        error.stdout = stdout;
+                        error.stderr = stderr;
+                        error.label = testCommand.label;
+                        reject(error);
+                    });
+                });
+            } catch (error) {
+                const details = error.stderr ?? error.stdout ?? error.message;
+                logger.error(details);
+                throw new Error(
+                    `${error.label ?? testCommand.label} failed ` +
+                    `(exit code: ${error.code ?? 1}). Please consult the ` +
+                    `logs for further details: ${details}`
+                );
+            }
         }
+        this.testsPassed = true;
     }
 
     #createReleaseDirectory() {
-        fs.mkdirSync(`${this.releaseDir}/teddy`, { recursive: true });
+        createDirectory(path.join(this.releaseDir, TEDDY_LABEL));
     }
 
     async #createArchives() {
-        this.archiveBaseName = `teddy-${this.version}`;
+        this.archiveBaseName = `${TEDDY_LABEL}-${this.version}`;
+        const stagingRoot = resolvePathInsideBase(
+            TEDDY_LABEL,
+            this.releaseDir,
+            'release staging root'
+        );
         for ( const resource of 
             this.config.system.resources.directories.concat(
                 this.config.system.resources.files) ) {
-            const sourcePath = `${this.repo}/${resource}`;
-            const targetPath = `${this.releaseDir}/teddy/${resource}`;
+            const sourcePath = resolvePathInsideBase(
+                resource,
+                this.pathToTeddyRepo,
+                `release source resource '${resource}'`
+            );
+            const targetPath = resolvePathInsideBase(
+                resource,
+                stagingRoot,
+                `release target resource '${resource}'`
+            );
+            createDirectory(path.dirname(targetPath));
             fs.cpSync(sourcePath, targetPath, { 
                 recursive: true, 
                 preserveTimestamps: true
             });
         }
-        this.tarPath = `${this.releaseDir}/${this.archiveBaseName}.tgz`;
-        this.zipPath = `${this.releaseDir}/${this.archiveBaseName}.zip`;
-        await tar(`${this.releaseDir}/teddy`, this.tarPath);
-        await zip(`${this.releaseDir}/teddy`, this.zipPath);
+        this.tarPath = path.join(
+            this.releaseDir, `${this.archiveBaseName}.tgz`);
+        this.zipPath = path.join(
+            this.releaseDir, `${this.archiveBaseName}.zip`);
+        await tar(stagingRoot, this.tarPath);
+        await zip(stagingRoot, this.zipPath);
     }
 
     #createChecksums() {
@@ -129,16 +224,15 @@ class ReleaseBuilder {
         const checksums = 
             `${tarHash}  ${this.archiveBaseName}.tgz\r\n` + 
             `${zipHash}  ${this.archiveBaseName}.zip`;
-        const checksumFilename = `teddy-${this.version}-checksums.txt`;
-        fs.writeFileSync(`${this.releaseDir}/${checksumFilename}`, checksums, {
-            encoding: 'utf-8'
-        });
+        const checksumFilename = `${TEDDY_LABEL}-${this.version}-checksums.txt`;
+        writeStringToFile(checksums, path.join(
+            this.releaseDir, checksumFilename));
     }
 
     async build() {
         try {
 
-            logger.info(`Teddy repo: ${this.repo}`);
+            logger.info(`Teddy repo: ${this.pathToTeddyRepo}`);
             logger.info('Building the release ...');
 
             // Validate the repository.
@@ -152,7 +246,7 @@ class ReleaseBuilder {
                 this.#getReleaseVersion();
 
                 // Empty the release directory if it exists.
-                logger.info('Stage 3 of 8 - Clearing the release directory...');
+                logger.info('Stage 3 of 8 - Emptying the release directory...');
                 this.#emptyReleaseDirectory();
 
                 // Check the version number matches the repo branch name.
@@ -162,7 +256,7 @@ class ReleaseBuilder {
                 if ( this.versionMatchesRepoBranchName ) {
 
                     // Run tests.
-                    logger.info('Stage 5 of 8 - Running tests...');
+                    logger.info('Stage 5 of 8 - Running test suite...');
                     await this.#runTests();
                     if ( this.testsPassed ) {
 
@@ -195,17 +289,17 @@ class ReleaseBuilder {
             }
 
         } catch (err) {
-            logger.error('An error was encountered whilst running the ' + 
-                'release build pipeline. Please consult the logs for ' + 
-                'further details.');
             logger.error(err.stack);
             try {
                 this.#emptyReleaseDirectory();
             } catch (error) {
-                logger.error('Could not clear the release build ' + 
+                logger.error('Could not empty the release build ' + 
                     'directory post-error.');
                 logger.debug(error.stack);
             }
+            throw new Error('An error was encountered whilst running the ' + 
+                'release build pipeline. Please consult the logs for ' + 
+                'further details: ' + err.stack);
         }
     }
 

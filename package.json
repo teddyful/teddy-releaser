@@ -2,7 +2,10 @@
     "name": "teddy-releaser",
     "version": "0.0.1",
     "description": "Create a release of Teddy.",
-    "main": "build.js", 
+    "engines": {
+        "node": ">=24.11.1"
+    },
+    "main": "build.js",
     "private": true,
     "type": "module",
     "scripts": {
@@ -17,14 +20,14 @@
     "bugs": {
         "url": "https://github.com/teddyful/teddy-releaser/issues"
     },
-    "homepage": "https://github.com/teddyful/teddy-releaser#readme",
+    "homepage": "https://teddyful.com",
     "devDependencies": {
-        "commander": "14.0.2", 
+        "commander": "15.0.0", 
         "current-git-branch": "2.0.2", 
         "del": "8.0.1", 
         "sha256-file": "1.0.0", 
         "winston": "3.19.0", 
         "winston-daily-rotate-file": "5.0.0", 
-        "zip-a-folder": "4.0.4"
+        "zip-a-folder": "6.1.1"
     }
 }

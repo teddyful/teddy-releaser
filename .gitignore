@@ -130,6 +130,7 @@ dist
 .yarn/install-state.gz
 .pnp.*
 
-# Teddy releaser directories
+# Teddy output directories
 logs/
 releases/
+working/
