@@ -61,6 +61,68 @@ gh auth status
 The authenticated account must be able to create draft releases and upload
 release assets to `teddyful/teddy`.
 
+## Sign Release Tags
+
+Release tags should be signed so GitHub can mark them as **Verified**. If you
+already use SSH commit signing, use the same SSH key for release tags.
+
+### One-Time Setup
+
+Confirm Git is configured for SSH signing:
+
+```bash
+git config --global --get gpg.format
+git config --global --get user.signingkey
+git config --global --get commit.gpgsign
+git config --global --get tag.gpgSign
+```
+
+Expected values for SSH signing:
+
+```text
+gpg.format = ssh
+user.signingkey = /path/to/your-signing-key.pub
+commit.gpgsign = true
+```
+
+Enable signed tags if it is not already set:
+
+```bash
+git config --global tag.gpgSign true
+```
+
+Your SSH signing public key must also be registered in GitHub under
+**Settings → SSH and GPG keys → New SSH key**, with key type **Signing Key**.
+
+### Per-Release Tag Signing
+
+Create and push the signed release tag from the Teddy repository **before**
+creating the GitHub draft release. The tag must point at the exact commit you
+are releasing from on the `release-x.y.z` branch.
+
+From the Teddy repository root:
+
+```bash
+cd /absolute/path/to/teddy
+
+# Replace 0.0.15 with the release version
+git tag -s v0.0.15 -m "Release v0.0.15"
+git push origin v0.0.15
+```
+
+Verify the tag locally:
+
+```bash
+git tag -v v0.0.15
+```
+
+When `teddy-releaser` runs with `--github-draft-release`, `gh release create`
+reuses the existing signed tag instead of creating an unsigned one.
+
+If you create a draft release before pushing a signed tag, GitHub may create an
+unsigned tag. In that case, delete the draft release and unsigned tag on
+GitHub, then recreate the signed tag and run `teddy-releaser` again.
+
 ## Release Notes Configuration
 
 GitHub-generated release notes are configured in the Teddy repository, not in
@@ -80,6 +142,12 @@ best results, use labelled PRs for future releases.
 
 ## Build Artifacts and Create Draft Release
 
+Recommended order:
+
+1. Check out the Teddy `release-x.y.z` branch.
+2. Create and push the signed release tag (see [Sign Release Tags](#sign-release-tags)).
+3. Run `teddy-releaser` with `--github-draft-release`.
+
 From the `teddy-releaser` repository root, run:
 
 ```bash
@@ -96,7 +164,7 @@ The releaser will:
 6. Run `npm run test:upgrade`.
 7. Create release archives and checksums under
    `working/releases/<version>/`.
-8. Create a draft GitHub release.
+8. Create a draft GitHub release against the existing signed tag.
 9. Upload the generated release artifacts.
 
 Expected local artifacts:
@@ -138,6 +206,7 @@ Teddy's `package.json`.
 
 Before publishing the draft release:
 
+- Confirm the release tag shows as **Verified** on GitHub.
 - Confirm the generated release notes are accurate.
 - Confirm all expected artifacts are attached.
 - Confirm the tag name and title match the intended version.
