@@ -39,9 +39,10 @@ const TEDDY_LABEL = 'teddy';
 
 class ReleaseBuilder {
 
-    constructor(pathToTeddyRepo) {
+    constructor(pathToTeddyRepo, opts = {}) {
         this.statusCode = 1;
         this.pathToTeddyRepo = pathToTeddyRepo;
+        this.opts = opts;
         this.config = null;
         this.repoIsValid = false;
         this.testsPassed = false;
@@ -51,6 +52,58 @@ class ReleaseBuilder {
         this.archiveBaseName = null;
         this.tarPath = null;
         this.zipPath = null;
+        this.checksumsPath = null;
+    }
+
+    async #runCommand(command, args, {
+        cwd = this.pathToTeddyRepo,
+        label = command,
+        env = {}
+    } = {}) {
+        return await new Promise((resolve, reject) => {
+            const childProcess = child.spawn(
+                command,
+                args,
+                {
+                    cwd,
+                    shell: false,
+                    stdio: ['ignore', 'pipe', 'pipe'],
+                    env: {
+                        ...process.env,
+                        CI: 'true',
+                        NO_COLOR: '1',
+                        FORCE_COLOR: '0',
+                        TERM: 'dumb',
+                        npm_config_progress: 'false',
+                        npm_config_audit: 'false',
+                        npm_config_fund: 'false',
+                        ...env
+                    }
+                }
+            );
+            let stdout = '';
+            let stderr = '';
+            childProcess.stdout.on('data', data => {
+                stdout += data.toString();
+            });
+            childProcess.stderr.on('data', data => {
+                stderr += data.toString();
+            });
+            childProcess.on('error', reject);
+            childProcess.on('close', code => {
+                if ( code === 0 ) {
+                    resolve({ stdout, stderr });
+                    return;
+                }
+                const error = new Error(`${label} failed with ` + 
+                    `exit code ${code}.`);
+                error.code = code;
+                error.stdout = stdout;
+                error.stderr = stderr;
+                error.label = label;
+                reject(error);
+            });
+        });
     }
 
     #validateRepo() {
@@ -192,49 +245,14 @@ class ReleaseBuilder {
         for ( const testCommand of testCommands ) {
             try {
                 logger.debug(`Running ${testCommand.label}...`);
-                await new Promise((resolve, reject) => {
-                    const childProcess = child.spawn(
-                        'npm',
-                        testCommand.args,
-                        {
-                            cwd: this.pathToTeddyRepo,
-                            shell: false,
-                            stdio: ['ignore', 'pipe', 'pipe'],
-                            env: {
-                                ...process.env,
-                                CI: 'true',
-                                NO_COLOR: '1',
-                                FORCE_COLOR: '0',
-                                TERM: 'dumb',
-                                npm_config_progress: 'false',
-                                npm_config_audit: 'false',
-                                npm_config_fund: 'false'
-                            }
-                        }
-                    );
-                    let stdout = '';
-                    let stderr = '';
-                    childProcess.stdout.on('data', data => {
-                        stdout += data.toString();
-                    });
-                    childProcess.stderr.on('data', data => {
-                        stderr += data.toString();
-                    });
-                    childProcess.on('error', reject);
-                    childProcess.on('close', code => {
-                        if ( code === 0 ) {
-                            resolve();
-                            return;
-                        }
-                        const error = new Error(`${testCommand.label} ` + 
-                            `failed with exit code ${code}.`);
-                        error.code = code;
-                        error.stdout = stdout;
-                        error.stderr = stderr;
-                        error.label = testCommand.label;
-                        reject(error);
-                    });
-                });
+                await this.#runCommand(
+                    'npm',
+                    testCommand.args,
+                    {
+                        cwd: this.pathToTeddyRepo,
+                        label: testCommand.label
+                    }
+                );
             } catch (error) {
                 const details = error.stderr ?? error.stdout ?? error.message;
                 logger.error(details);
@@ -293,58 +311,108 @@ class ReleaseBuilder {
             `${tarHash}  ${this.archiveBaseName}.tgz\r\n` + 
             `${zipHash}  ${this.archiveBaseName}.zip`;
         const checksumFilename = `${TEDDY_LABEL}-${this.version}-checksums.txt`;
-        writeStringToFile(checksums, path.join(
-            this.releaseDir, checksumFilename));
+        this.checksumsPath = path.join(this.releaseDir, checksumFilename);
+        writeStringToFile(checksums, this.checksumsPath);
+    }
+
+    async #createGitHubDraftRelease() {
+        const tagName = `v${this.version}`;
+        const title = tagName;
+        for ( const filePath of [
+            this.tarPath, this.zipPath, this.checksumsPath] ) {
+            if ( !filePath || !pathExists(filePath) ) {
+                throw new Error(
+                    `Cannot create GitHub draft release because the ` +
+                    `following release artifact does not exist: '${filePath}'.`
+                );
+            }
+        }
+        logger.debug(`Creating GitHub draft release ${tagName}...`);
+        await this.#runCommand(
+            'gh',
+            [
+                'release',
+                'create',
+                tagName,
+                this.tarPath,
+                this.zipPath,
+                this.checksumsPath,
+                '--repo',
+                'teddyful/teddy',
+                '--draft',
+                '--generate-notes',
+                '--title',
+                title
+            ],
+            {
+                cwd: this.pathToTeddyRepo,
+                label: 'GitHub draft release creation'
+            }
+        );
+        logger.debug(`Created GitHub draft release ${tagName}.`);
     }
 
     async build() {
         try {
 
+            const totalStages = this.opts.githubDraftRelease ? 10 : 9;
             logger.info(`Teddy repo: ${this.pathToTeddyRepo}`);
             logger.info('Building the release ...');
 
             // Validate the repository.
-            logger.info('Stage 1 of 9 - Validating the repository...');
+            logger.info(`Stage 1 of ${totalStages} - ` + 
+                'Validating the repository...');
             this.#validateRepo();
             if ( this.repoIsValid ) {
 
                 // Get the release version number.
-                logger.info('Stage 2 of 9 - Retrieving the release ' + 
-                    'version number...');
+                logger.info(`Stage 2 of ${totalStages} - ` + 
+                    'Retrieving the release version number...');
                 this.#getReleaseVersion();
 
                 // Empty the release directory if it exists.
-                logger.info('Stage 3 of 9 - Emptying the release directory...');
+                logger.info(`Stage 3 of ${totalStages} - ` + 
+                    'Emptying the release directory...');
                 this.#emptyReleaseDirectory();
 
                 // Check the version number matches the repo branch name.
-                logger.info('Stage 4 of 9 - Checking the release ' + 
-                    'version number...');
+                logger.info(`Stage 4 of ${totalStages} - ` + 
+                    'Checking the release version number...');
                 this.#checkReleaseVersionMatchesRepoBranchName();
                 if ( this.versionMatchesRepoBranchName ) {
 
                     // Check working tree cleanliness.
-                    logger.info('Stage 5 of 9 - Checking working tree ' + 
-                        'cleanliness...');
+                    logger.info(`Stage 5 of ${totalStages} - ` + 
+                        'Checking working tree cleanliness...');
                     await this.#checkWorkingTreeIsClean();
 
                     // Run tests.
-                    logger.info('Stage 6 of 9 - Running test suite...');
+                    logger.info(`Stage 6 of ${totalStages} - ` + 
+                        'Running test suite...');
                     await this.#runTests();
                     if ( this.testsPassed ) {
 
                         // Create the release directory if it does not exist.
-                        logger.info('Stage 7 of 9 - Creating the release ' + 
-                            'directory...');
+                        logger.info(`Stage 7 of ${totalStages} - ` + 
+                            'Creating the release directory...');
                         this.#createReleaseDirectory();
 
                         // Create the archive files.
-                        logger.info('Stage 8 of 9 - Creating archives...');
+                        logger.info(`Stage 8 of ${totalStages} - ` + 
+                            'Creating archives...');
                         await this.#createArchives();
 
                         // Create the checksums file.
-                        logger.info('Stage 9 of 9 - Generating checksums...');
+                        logger.info(`Stage 9 of ${totalStages} - ` + 
+                            'Generating checksums...');
                         this.#createChecksums();
+
+                        // Generate draft GitHub release.
+                        if ( this.opts.githubDraftRelease ) {
+                            logger.info(`Stage 10 of ${totalStages} - ` + 
+                                'Creating draft GitHub release...');
+                            await this.#createGitHubDraftRelease();
+                        }
 
                         // Update the status code.
                         this.statusCode = 0;

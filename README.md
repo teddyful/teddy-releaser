@@ -10,8 +10,9 @@
 [2. Prerequisites](#prerequisites)<br/>
 [3. Setup](#setup)<br/>
 [4. Usage](#usage)<br/>
-[5. Release Checklist](#release-checklist)<br/>
-[6. Further Information](#information)<br/>
+[5. GitHub Draft Releases](#github-draft-releases)<br/>
+[6. Release Checklist](#release-checklist)<br/>
+[7. Further Information](#information)<br/>
 <br/>
 
 ## <a name="introduction"></a>1. Introduction
@@ -111,14 +112,28 @@ Note that if any of the tests fail, then the release files will not be created.
 
 <p align="right"><a href="#readme-top">Back to Top &#9650;</a></p>
 
-## <a name="release-checklist"></a>5. Release Checklist
+## <a name="github-draft-releases"></a>5. GitHub Draft Releases
+
+To create a draft GitHub release with generated release notes and uploaded
+artifacts, use:
+
+```
+npm run build -- --repo /absolute/path/to/teddy --github-draft-release
+```
+
+This requires the GitHub CLI (`gh`) to be installed and authenticated. For setup
+instructions and the full workflow, see [`GITHUB_RELEASE.md`](GITHUB_RELEASE.md).
+
+<p align="right"><a href="#readme-top">Back to Top &#9650;</a></p>
+
+## <a name="release-checklist"></a>6. Release Checklist
 
 Before publishing a Teddy release, follow the checklist in
 [`RELEASE_CHECKLIST.md`](RELEASE_CHECKLIST.md).
 
 <p align="right"><a href="#readme-top">Back to Top &#9650;</a></p>
 
-## <a name="information"></a>6. Further Information
+## <a name="information"></a>7. Further Information
 
 For further information, please visit <a href="https://teddyful.com" target="_blank">teddyful.com</a>.
 

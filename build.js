@@ -40,6 +40,11 @@ program
     .requiredOption(
         '--repo <repo>', 
         'Absolute path to the local Teddy repository (required)')
+    .option(
+        '--github-draft-release',
+        'Create a draft GitHub release for Teddy using gh after building artifacts',
+        false
+    )
     .action(async function(opts) {
         printBanner();
         logger.info('Started the Teddy release builder app ' + 
@@ -50,7 +55,9 @@ program
             );
         }
         const repoPath = path.resolve(opts.repo);
-        const releaseBuilder = new ReleaseBuilder(repoPath);
+        const releaseBuilder = new ReleaseBuilder(repoPath, {
+            githubDraftRelease: opts.githubDraftRelease
+        });
         await releaseBuilder.build();
         logger.info('Exiting the Teddy release builder app ' + 
             `(exitCode = ${releaseBuilder.statusCode}).`);
